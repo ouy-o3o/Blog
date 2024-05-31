@@ -193,3 +193,5 @@ export default Index;
 ```
 
 如果一个文件夹下又有 template 又有 layout 又有 loading 他们渲染出来的层级是怎么样的呢
+
+![app-router-p3](https://github.com/ouy-o3o/Blog/blob/next/assets/app-router-p3.png?raw=true)
