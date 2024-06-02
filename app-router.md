@@ -195,3 +195,11 @@ export default Index;
 如果一个文件夹下又有 template 又有 layout 又有 loading 他们渲染出来的层级是怎么样的呢
 
 ![app-router-p3](https://github.com/ouy-o3o/Blog/blob/next/assets/app-router-p3.png?raw=true)
+
+# 平行路由
+
+可用与在同一个布局中同时或有条件的渲染一个或多个页面，类似于 Vue 的插槽
+
+## 条件渲染
+
+![app-router-p3](https://github.com/ouy-o3o/Blog/blob/next/assets/dynamic-routes-4.webp?raw=true)

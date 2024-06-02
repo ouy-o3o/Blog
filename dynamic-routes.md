@@ -11,7 +11,7 @@ export default function Page({ params }) {
 }
 ```
 
-![app-router-p3](https://github.com/ouy-o3o/Blog/blob/next/assets/dynamic-routes-1.png?raw=true)
+![app-router-p3](https://github.com/ouy-o3o/Blog/blob/next/assets/dynamic-1.png?raw=true)
 
 ## [...folderName]
 
@@ -33,19 +33,19 @@ export default function Page({ params }) {
 
 ## 按照逻辑分组
 
-![app-router-p3](https://github.com/ouy-o3o/Blog/blob/next/assets/dynamic-routes-2.webp?raw=true)
+![app-router-p3](https://github.com/ouy-o3o/Blog/blob/next/assets/dynamic-routes-2.png?raw=true)
 
 ## 创建不同布局
 
 使用路由组，即使是同一层级的路由，也可以使用不同的布局
 
-![app-router-p3](https://github.com/ouy-o3o/Blog/blob/next/assets/dynamic-routes-3.webp?raw=true)
+![app-router-p3](https://github.com/ouy-o3o/Blog/blob/next/assets/dynamic-routes-3.png?raw=true)
 
 在这个例子中，`/account` 、`/cart`、`/checkout` 都在同一层级。但是 `/account`和 `/cart`使用的是 `/app/(shop)/layout.js`布局和`app/layout.js`布局，`/checkout`使用的是 `app/layout.js`
 
 ## 创建不同根布局
 
-![app-router-p3](https://github.com/ouy-o3o/Blog/blob/next/assets/dynamic-routes-4.webp?raw=true)
+![app-router-p3](https://github.com/ouy-o3o/Blog/blob/next/assets/dynamic-routes-4.png?raw=true)
 
 因为要创建多个根布局，原本在`app/layout.js` 的布局文件需要删除，而且每一个路由组里的布局文件都需要有`<html>`和`<body>` 标签
 
@@ -58,3 +58,58 @@ export default function Page({ params }) {
 3. 创建多个根布局的时候，因为删除了顶层的 app/layout.js 文件，访问 /会报错，所以 app/page.js 需要定义在其中一个路由组中。 4.跨根布局导航会导致页面完全重新加载，就比如使用 app/(shop)/layout.js 根布局的 /cart 跳转到使用 app/(marketing)/layout.js 根布局的 /blog 会导致页面重新加载（full page load）。
 
 注：当定义多个根布局的时候，使用 app/not-found.js 会出现问题。具体参考 [《Next.js v14 如何为多个根布局自定义不同的 404 页面？竟然还有些麻烦！欢迎探讨》](https://juejin.cn/post/7351321244125265930)
+
+# 平行路由
+
+可用与在同一个布局中同时或有条件的渲染一个或多个页面，类似于 Vue 的插槽
+
+## 条件渲染
+
+![app-router-p3](https://github.com/ouy-o3o/Blog/blob/next/assets/parallel-routes-1.png?raw=true)
+
+将文件夹名称以`@`开头，比如上文就定义了 `@team` ,`@analytics`两个插槽。
+
+插槽会作为 props 传递给共享的父布局，比如 `app/layout.js`
+
+从 props 里获取了 `@team` 和 `@analytics` 两个插槽的内容，并将其和 children 的内容一起渲染
+
+```js
+// app/layout.js
+export default function Layout({ children, team, analytics }) {
+  return (
+    <>
+      {children}
+      {team}
+      {analytics}
+    </>
+  );
+}
+```
+
+这里会发现， children 也就是一个隐式插槽，`app/page.js` 相当于 `app/@children/page.js`.
+
+具体使用场景，比如做登录的前置检查，在布局中判断用户是否登录，如果没登陆，渲染 login 页面，这样的好处是代码完全分离。且因为布局是共用的，不管你访问这个项目的任何页面， 都会走这个逻辑，路径不一，但是页面都是 login，不用让用户感知到跳转到登录页这个过程。
+
+## 独立的路由处理
+
+平行路由可以让你为每个路由定义独立的错误处理和 loading 页面。一张图看懂
+
+![app-router-p3](https://github.com/ouy-o3o/Blog/blob/next/assets/parallel-routes-2.png?raw=true)
+
+## 子导航
+
+注意我们描述 team 和 analytics 时依然用的是“页面”这个说法，因为它们就像书写正常的页面一样使用 page.js。除此之外，它们也能像正常的页面一样，添加子页面，比如我们在 @analytics 下添加两个子页面：`/page-views` and `/visitors：`
+
+![app-router-p3](https://github.com/ouy-o3o/Blog/blob/next/assets/parallel-routes-3.png?raw=true)
+
+平行路由跟路由组一样，不会影响 URL，所以 `/@analytics/page-views/page.js` 对应的地址是 `/page-views`，`/@analytics/visitors/page.js` 对应的地址是 `/visitors`，你可以导航至这些路由：
+
+这部分内容在应用的时候比较灵活，在上面的例子中，我们访问了`/app` 会显示 `children` 和两个插槽 `@team` ,`@analytics`的内容，当链接跳转到`/page-views` 页面上显示的内容是 `children` 和两个插槽 `@team` ,`page-views/page.js`的内容。只会在原本`@analytics`的内容区域替换新的地址内容。
+
+总的来说，每个插槽都有自己独立的导航和状态管理，就像一个小型应用一样。这个特性适合构建一些比较复杂的应用。
+
+平行路由优势:
+
+1. 可以将单个布局拆分为多个插槽，使代码便于管理，尤其适合团队协作
+2. 每个插槽都可以定义自己的加载页面和错误状态，比如某个插槽加载速度慢，给他加上一个加载效果，加载期间，不会影响其他插槽的渲染和交互。当出现错误的时候也不会影响其他页面，只会再自己的插槽内容上展示错误信息，有效改善用户体验。
+3. 每个插槽都有自己的独立导航和状态管理。同一个插槽可以根据路由显示不同内容。
