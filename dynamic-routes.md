@@ -113,3 +113,141 @@ export default function Layout({ children, team, analytics }) {
 1. 可以将单个布局拆分为多个插槽，使代码便于管理，尤其适合团队协作
 2. 每个插槽都可以定义自己的加载页面和错误状态，比如某个插槽加载速度慢，给他加上一个加载效果，加载期间，不会影响其他插槽的渲染和交互。当出现错误的时候也不会影响其他页面，只会再自己的插槽内容上展示错误信息，有效改善用户体验。
 3. 每个插槽都有自己的独立导航和状态管理。同一个插槽可以根据路由显示不同内容。
+
+# 拦截路由
+
+拦截路由允许你在当前路由拦截其他路由地址，并在当前路由展示内容。
+
+## 实现方式
+
+实现拦截路由需要你在命名文件夹的时候以`(...)` 开头，其中：
+
+1. `(.)` 表示匹配同一层级
+2. `(..)`表示匹配上一层级
+3. `(..)(..)`表示匹配上上层级
+4. `(...)`表示匹配根目录
+
+但是要注意，这个匹配方式是匹配的路由层级，不是文件层级，比如路由组、平行路由、这些不会影响 URL 的文件夹就不会被计算在层级内。
+
+![app-router-p3](https://github.com/ouy-o3o/Blog/blob/next/assets/parallel-routes-4.png?raw=true)
+
+`/feed/(..)photo`对应的路由是`/feed/photo`，要拦截的路由是`/photo`,两者只差了一个层级，所以使用`(..)`
+
+## 示例
+
+我们写个 demo 来实现这个效果，目录结构如下：
+
+```js
+app
+├─ layout.js
+├─ page.js
+├─ data.js
+├─ default.js
+├─ @modal
+│  ├─ default.js
+│  └─ (.)photo
+│     └─ [id]
+│        └─ page.js
+└─ photo
+   └─ [id]
+      └─ page.js
+
+```
+
+虽然涉及的文件很多，但每个文件的代码都很简单。
+
+先 Mock 一下图片的数据，`app/data.js`代码如下：
+
+```js
+export const photos = [
+  { id: "1", src: "http://placekitten.com/210/210" },
+  { id: "2", src: "http://placekitten.com/330/330" },
+  { id: "3", src: "http://placekitten.com/220/220" },
+  { id: "4", src: "http://placekitten.com/240/240" },
+  { id: "5", src: "http://placekitten.com/250/250" },
+  { id: "6", src: "http://placekitten.com/300/300" },
+  { id: "7", src: "http://placekitten.com/500/500" },
+];
+```
+
+`app/page.js`代码如下：
+
+```js
+import Link from "next/link";
+import { photos } from "./data";
+
+export default function Home() {
+  return (
+    <main className="flex flex-row flex-wrap">
+      {photos.map(({ id, src }) => (
+        <Link key={id} href={`/photo/${id}`}>
+          <img width="200" src={src} className="m-1" />
+        </Link>
+      ))}
+    </main>
+  );
+}
+```
+
+`app/layout.js` 代码如下：
+
+```js
+import "./globals.css";
+
+export default function Layout({ children, modal }) {
+  return (
+    <html>
+      <body>
+        {children}
+        {modal}
+      </body>
+    </html>
+  );
+}
+```
+
+此时访问 `/`，效果如下：
+
+![app-router-p3](https://github.com/ouy-o3o/Blog/blob/next/assets/parallel-routes-5.png?raw=true)
+
+现在我们再来实现下单独访问图片地址时的效果，新建 `app/photo/[id]/page.js`，代码如下：
+
+```js
+import { photos } from "../../data";
+
+export default function PhotoPage({ params: { id } }) {
+  const photo = photos.find((p) => p.id === id);
+  return <img className="block w-1/4 mx-auto mt-10" src={photo.src} />;
+}
+```
+
+访问 `/photo/6`，效果如下：
+
+![app-router-p3](https://github.com/ouy-o3o/Blog/blob/next/assets/parallel-routes-6.png?raw=true)
+
+现在我们开始实现拦截路由，为了和单独访问图片地址时的样式区分，我们声明另一种样式效果。`app/@modal/(.)photo/[id]/page.js` 代码如下：
+
+```js
+import { photos } from "../../../data";
+
+export default function PhotoModal({ params: { id } }) {
+  const photo = photos.find((p) => p.id === id);
+  return (
+    <div className="flex h-60 justify-center items-center fixed bottom-0 bg-slate-300 w-full">
+      <img className="w-52" src={photo.src} />
+    </div>
+  );
+}
+```
+
+因为用到了平行路由，所以我们需要设置 `default.js`。`app/default.js` 和 `app/@modal/default.js`的代码都是：
+
+```js
+export default function Default() {
+  return null;
+}
+```
+
+最终的效果，就可以实现在/app 页面点击照片 在路由改变但是不改变当前页面的渲染，在下方插槽内渲染照片详情，刷新页面展示刚才点击的图片大图。
+
+另一个 Demo 地址 [nextjs-app-route-interception.vercel.app/](https://link.juejin.cn/?target=https%3A%2F%2Fnextjs-app-route-interception.vercel.app%2F)
